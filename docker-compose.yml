@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: syamil-barbershop-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: syamil_barbershop
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: syamil_user
+      MYSQL_PASSWORD: syamil_password
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: syamil-barbershop-api
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      - PORT=8080
+      - DB_USER=syamil_user
+      - DB_PASS=syamil_password
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=syamil_barbershop
+      - JWT_SECRET=syamilbarbershop_verysecretkey
+    depends_on:
+      db:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: syamil-barbershop-pma
+    restart: always
+    ports:
+      - "8082:80"
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=db
+      - PMA_USER=syamil_user
+      - PMA_PASSWORD=syamil_password
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
