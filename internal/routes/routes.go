@@ -4,8 +4,8 @@ import (
 	"syamilbarbershop-be/internal/handlers"
 	"syamilbarbershop-be/internal/middleware"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter() *gin.Engine {
@@ -22,8 +22,8 @@ func SetupRouter() *gin.Engine {
 	{
 		api.POST("/login", handlers.Login)
 		api.POST("/register", handlers.Register)
-		api.GET("/services", handlers.GetServices) // Publicly viewable
-		api.POST("/appointments", handlers.CreateAppointment) // Allowed for public booking
+		api.GET("/services", handlers.GetServices)
+		api.POST("/appointments", handlers.CreateAppointment)
 	}
 
 	// Protected routes
@@ -43,6 +43,7 @@ func SetupRouter() *gin.Engine {
 
 		// Appointments
 		auth.GET("/appointments", handlers.GetAppointments)
+		auth.PUT("/appointments/:id", handlers.UpdateAppointment)
 		auth.PUT("/appointments/:id/status", handlers.UpdateAppointmentStatus)
 		auth.DELETE("/appointments/:id", handlers.DeleteAppointment)
 	}

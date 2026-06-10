@@ -20,12 +20,13 @@ func GetAppointments(c *gin.Context) {
 
 func CreateAppointment(c *gin.Context) {
 	var req struct {
-		ServiceID     uint   `json:"service_id" binding:"required"`
-		CustomerName  string `json:"customer_name"`
-		CustomerPhone string `json:"customer_phone" binding:"required"`
-		Date          string `json:"date" binding:"required"`
-		Time          string `json:"time" binding:"required"`
-		PaymentMethod string `json:"payment_method"`
+		ServiceID     uint                     `json:"service_id" binding:"required"`
+		CustomerName  string                   `json:"customer_name"`
+		CustomerPhone string                   `json:"customer_phone" binding:"required"`
+		Date          string                   `json:"date" binding:"required"`
+		Time          string                   `json:"time" binding:"required"`
+		PaymentMethod string                   `json:"payment_method"`
+		Status        models.AppointmentStatus `json:"status"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -61,12 +62,17 @@ func CreateAppointment(c *gin.Context) {
 	}
 
 	// 4. Create Appointment
+	status := models.StatusPending
+	if req.Status != "" {
+		status = req.Status
+	}
+
 	appointment := models.Appointment{
 		CustomerID:    customer.ID,
 		ServiceID:     service.ID,
 		Date:          models.JSONDate(parsedDate),
 		Time:          req.Time,
-		Status:        models.StatusPending,
+		Status:        status,
 		PaymentMethod: req.PaymentMethod,
 		Price:         service.Price,
 	}
@@ -79,6 +85,78 @@ func CreateAppointment(c *gin.Context) {
 	// Preload for response
 	database.DB.Preload("Customer").Preload("Service").First(&appointment, appointment.ID)
 	c.JSON(http.StatusCreated, appointment)
+}
+
+func UpdateAppointment(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		ServiceID     uint                     `json:"service_id" binding:"required"`
+		CustomerName  string                   `json:"customer_name"`
+		CustomerPhone string                   `json:"customer_phone" binding:"required"`
+		Date          string                   `json:"date" binding:"required"`
+		Time          string                   `json:"time" binding:"required"`
+		PaymentMethod string                   `json:"payment_method"`
+		Status        models.AppointmentStatus `json:"status" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var appointment models.Appointment
+	if err := database.DB.First(&appointment, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Appointment not found"})
+		return
+	}
+
+	// 1. Find or update/create customer
+	var customer models.Customer
+	if err := database.DB.Where("phone = ?", req.CustomerPhone).First(&customer).Error; err != nil {
+		customer = models.Customer{
+			Name:  req.CustomerName,
+			Phone: req.CustomerPhone,
+		}
+		if err := database.DB.Create(&customer).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer"})
+			return
+		}
+	} else if req.CustomerName != "" && customer.Name != req.CustomerName {
+		customer.Name = req.CustomerName
+		database.DB.Save(&customer)
+	}
+
+	// 2. Parse Date
+	parsedDate, err := time.Parse("2006-01-02", req.Date)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format, use YYYY-MM-DD"})
+		return
+	}
+
+	// 3. Find Service for Price
+	var service models.Service
+	if err := database.DB.First(&service, req.ServiceID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Service not found"})
+		return
+	}
+
+	// 4. Update Appointment
+	appointment.CustomerID = customer.ID
+	appointment.ServiceID = service.ID
+	appointment.Date = models.JSONDate(parsedDate)
+	appointment.Time = req.Time
+	appointment.PaymentMethod = req.PaymentMethod
+	appointment.Status = req.Status
+	appointment.Price = service.Price
+
+	if err := database.DB.Save(&appointment).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Preload for response
+	database.DB.Preload("Customer").Preload("Service").First(&appointment, appointment.ID)
+	c.JSON(http.StatusOK, appointment)
 }
 
 func UpdateAppointmentStatus(c *gin.Context) {
