@@ -29,9 +29,15 @@ func ConnectDB() {
 
 	fmt.Println("Database connected successfully")
 	DB = db
+}
+
+func MigrateDB() {
+	if DB == nil {
+		log.Fatal("Database connection not established. Call ConnectDB first.")
+	}
 
 	// Auto Migration
-	err = DB.AutoMigrate(
+	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Service{},
 		&models.Customer{},

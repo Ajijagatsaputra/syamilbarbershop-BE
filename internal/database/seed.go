@@ -22,6 +22,7 @@ func SeedData() {
 		fmt.Println("Admin user seeded")
 	}
 
+
 	// Seed Services
 	DB.Model(&models.Service{}).Count(&count)
 	if count == 0 {

@@ -45,6 +45,7 @@ func Login(c *gin.Context) {
 			"id":    user.ID,
 			"name":  user.Name,
 			"email": user.Email,
+			"phone": user.Phone,
 			"role":  user.Role,
 		},
 	})
@@ -53,6 +54,7 @@ func Login(c *gin.Context) {
 type RegisterRequest struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
+	Phone    string `json:"phone"`
 	Password string `json:"password" binding:"required,min=6"`
 }
 
@@ -81,6 +83,7 @@ func Register(c *gin.Context) {
 	user := models.User{
 		Name:     req.Name,
 		Email:    req.Email,
+		Phone:    req.Phone,
 		Password: string(hashedPassword),
 		Role:     "customer",
 	}
@@ -104,6 +107,7 @@ func Register(c *gin.Context) {
 			"id":    user.ID,
 			"name":  user.Name,
 			"email": user.Email,
+			"phone": user.Phone,
 			"role":  user.Role,
 		},
 	})
